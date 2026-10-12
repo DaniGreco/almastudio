@@ -16,6 +16,7 @@ import {
 import { buildSpawnOptions, harnessCommandLabel } from '../lib/harness'
 import { claudeSessionFor } from '../lib/claudeSession'
 import { resolveScheme } from '../lib/schemes'
+import { terminalFontStack } from '../lib/fonts'
 import { resolveUiTheme } from '../lib/uiThemes'
 import { useDrag } from '../lib/dragDrop'
 import { useSettings } from '../store/settings'
@@ -161,9 +162,7 @@ export function TerminalView({ tab, visible, focused }: Props) {
       allowProposedApi: true,
       cursorBlink: settings.terminal.cursorBlink,
       cursorStyle: settings.terminal.cursorStyle,
-      fontFamily:
-        settings.terminal.fontFamily ||
-        "'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace",
+      fontFamily: terminalFontStack(settings.terminal.fontFamily),
       fontSize: settings.terminal.fontSize,
       lineHeight: settings.terminal.lineHeight,
       scrollback: settings.terminal.scrollback,
@@ -505,9 +504,7 @@ export function TerminalView({ tab, visible, focused }: Props) {
       isDark,
       resolveUiTheme(settings.uiTheme),
     )
-    term.options.fontFamily =
-      settings.terminal.fontFamily ||
-      "'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace"
+    term.options.fontFamily = terminalFontStack(settings.terminal.fontFamily)
     term.options.fontSize = settings.terminal.fontSize
     term.options.lineHeight = settings.terminal.lineHeight
     term.options.cursorStyle = settings.terminal.cursorStyle

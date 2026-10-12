@@ -12,6 +12,8 @@ import type {
 export const appInfo = () => invoke<AppInfo>('app_info')
 export const signalReady = () => invoke<void>('ready')
 export const defaultShell = () => invoke<string>('default_shell')
+/** Every installed font family; see `lib/fonts` for the terminal-worthy ones. */
+export const fontFamilies = () => invoke<string[]>('font_families')
 /** Rebuilds the native menu; `harnesses` are the ones to offer new tabs for. */
 export const applyMenu = (labels: Record<string, string>, harnesses: string[]) =>
   invoke<void>('apply_menu', { labels, harnesses })

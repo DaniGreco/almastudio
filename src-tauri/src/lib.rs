@@ -1,5 +1,6 @@
 mod browser;
 mod editors;
+mod fonts;
 mod fsx;
 mod git;
 mod git_cli;
@@ -318,6 +319,7 @@ pub fn run() {
             cancel_exit,
             menu::apply_menu,
             harness::installed_harnesses,
+            fonts::font_families,
             pty::pty_spawn,
             pty::pty_write,
             pty::pty_resize,

@@ -12,6 +12,7 @@ import { useUi, type SettingsSection } from '../store/ui'
 import { AVAILABLE_LOCALES, LOCALE_NAMES, useT } from '../i18n'
 import { SCHEME_NAMES } from '../lib/schemes'
 import { UI_THEMES } from '../lib/uiThemes'
+import { installedMonospaceFonts, quoteFamily, settingFamily } from '../lib/fonts'
 import { useInstalledHarnesses } from '../hooks/useInstalledHarnesses'
 import { CODEX_APPROVAL_ARGS } from '../lib/harness'
 import { useTheme } from '../hooks/useTheme'
@@ -225,6 +226,51 @@ function ThemeGrid({
 
 // -------------------------------------------------------------- terminal ---
 
+/**
+ * Only fonts that are installed and fixed-pitch are offered: anything else
+ * either silently falls back or breaks the terminal's cell grid. A value the
+ * list can't express — typed by hand before there was a list, or a font since
+ * uninstalled — is kept as an option of its own rather than dropped.
+ */
+function TerminalFontPicker({
+  value, onChange,
+}: { value: string; onChange: (v: string) => void }) {
+  const t = useT()
+  const [fonts, setFonts] = useState<string[] | null>(null)
+
+  useEffect(() => {
+    let live = true
+    void installedMonospaceFonts().then((found) => {
+      if (live) setFonts(found)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+
+  const family = settingFamily(value)
+  const listed = family !== null && !!fonts?.includes(family)
+  const selected = !value.trim() ? '' : family !== null && listed ? quoteFamily(family) : value
+
+  return (
+    <select
+      className="select" value={selected}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">{t('settings.termFontSystem')}</option>
+      {selected && !listed && (
+        <option value={value}>
+          {fonts ? t('settings.termFontMissing', { font: family ?? value }) : (family ?? value)}
+        </option>
+      )}
+      {fonts?.map((f) => (
+        <option key={f} value={quoteFamily(f)}>{f}</option>
+      ))}
+    </select>
+  )
+}
+
+
 function TerminalSection() {
   const t = useT()
   const s = useSettings((x) => x.settings)
@@ -249,9 +295,9 @@ function TerminalSection() {
       </Field>
 
       <Field label={t('settings.termFont')} hint={t('settings.termFontHint')}>
-        <input
-          className="input mono" value={s.terminal.fontFamily} placeholder={t('settings.termFontSystem')}
-          onChange={(e) => patch('terminal', { fontFamily: e.target.value })}
+        <TerminalFontPicker
+          value={s.terminal.fontFamily}
+          onChange={(v) => patch('terminal', { fontFamily: v })}
         />
       </Field>
 

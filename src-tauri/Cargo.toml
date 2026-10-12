@@ -65,6 +65,11 @@ x25519-dalek = { version = "2", features = ["static_secrets"] }
 sha2 = "0.10"
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls-no-provider"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+# Lists the installed fonts for the terminal font picker. Only
+# the scanner: no shaping or rendering, so it stays a small dependency.
+fontdb = { version = "0.23", default-features = false, features = ["std", "fs", "memmap", "fontconfig"] }
+# Already in the tree through fontdb; read directly to spot symbol fonts.
+ttf-parser = { version = "0.25", default-features = false, features = ["std"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
