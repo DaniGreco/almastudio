@@ -9,6 +9,16 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-12
+
+### Added
+
+- The terminal font is now chosen from a list in Settings → Terminal instead
+  of typed by hand. The list shows only the fixed-width fonts installed on
+  the computer, so a font that is missing or would break the terminal's
+  grid can no longer be picked by mistake. A font set before this release
+  stays selected; if it is no longer installed, it is marked as such.
+
 ## [1.8.2] - 2026-10-08
 
 ### Fixed
