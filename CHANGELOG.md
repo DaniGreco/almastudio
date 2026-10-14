@@ -9,6 +9,8 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-10-14
+
 ### Fixed
 
 - The companion app's relay now defaults to
