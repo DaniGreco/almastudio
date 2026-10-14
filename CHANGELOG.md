@@ -9,6 +9,14 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+### Fixed
+
+- The companion app's relay now defaults to
+  `wss://relay.almastudio.irregulab.com`, where it is live. The old default,
+  `relay.almastudio.almaware.net`, never went online; a settings file that
+  still holds it is moved to the new address on the next launch, while an
+  address you typed yourself is left alone.
+
 ## [1.9.0] - 2026-10-12
 
 ### Added
