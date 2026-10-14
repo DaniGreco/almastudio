@@ -72,9 +72,9 @@ export default function Home() {
         <figure>
           <img
             src="/main-window.png"
-            width={1606}
-            height={887}
-            alt="The AlmaStudio window: projects on the left, a Markdown preview in the middle, the file tree and git panel on the right"
+            width={1600}
+            height={974}
+            alt="The AlmaStudio window: projects on the left, a Claude Code tab in the middle, the git changes panel on the right"
           />
         </figure>
       </section>

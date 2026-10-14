@@ -10,7 +10,7 @@ of blocked threads — no Electron, no per-tab browser process.
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/main-window.png" alt="Main window — Markdown preview, file tree and side panel" width="800" />
+  <img src="docs/screenshots/main-window.png" alt="Main window — projects by category, a Claude Code tab and the git changes panel" width="800" />
 </p>
 
 <p align="center">
