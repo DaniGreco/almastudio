@@ -14,7 +14,7 @@ end to end through it (see `src-tauri/src/remote/noise.rs`).
 - `GET /healthz`.
 
 Nothing is stored. Run it behind a TLS-terminating proxy that passes WebSocket
-upgrades; the app and the desktop connect to `wss://relay.almastudio.almaware.net`.
+upgrades; the app and the desktop connect to `wss://relay.almastudio.irregulab.com`.
 
 ```sh
 cargo test

@@ -6,7 +6,7 @@ import type { HarnessKind, Settings } from '../lib/types'
 
 const STATE_KEY = 'settings'
 
-export const SETTINGS_VERSION = 4
+export const SETTINGS_VERSION = 5
 
 export const DEFAULT_SETTINGS: Settings = {
   version: SETTINGS_VERSION,
@@ -90,7 +90,7 @@ export const DEFAULT_SETTINGS: Settings = {
     enabled: false,
     port: 47821,
     relay: false,
-    relayUrl: 'wss://relay.almastudio.almaware.net',
+    relayUrl: 'wss://relay.almastudio.irregulab.com',
     notify: true,
     hideNames: false,
   },
@@ -160,6 +160,13 @@ function migrate(raw: Record<string, unknown>): Record<string, unknown> {
     // with auto-start above.
     const panel = raw.panel as Record<string, unknown> | undefined
     if (panel && panel.showHidden === false) panel.showHidden = true
+  }
+
+  if (from < 5) {
+    // The relay moved to relay.almastudio.irregulab.com before it ever went
+    // live; a stored copy of the old default would point at nothing.
+    const remote = raw.remote as Record<string, unknown> | undefined
+    if (remote && remote.relayUrl === 'wss://relay.almastudio.almaware.net') delete remote.relayUrl
   }
 
   raw.version = SETTINGS_VERSION

@@ -23,7 +23,7 @@ export type TerminalStatus = 'idle' | 'starting' | 'running' | 'exited'
 export const PROLOGUE = 'almastudio-remote-v1'
 export const DEFAULT_PORT = 47821
 /** Where the app connects when the desktop is not on the same network. */
-export const DEFAULT_RELAY = 'wss://relay.almastudio.almaware.net'
+export const DEFAULT_RELAY = 'wss://relay.almastudio.irregulab.com'
 
 // ------------------------------------------------------------- pairing ----
 
