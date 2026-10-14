@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { Downloads } from '@/components/Downloads'
+import { JsonLd } from '@/components/JsonLd'
 import { Phone } from '@/components/Phone'
 import { site } from '@/config'
+import { desktopApp } from '@/structured-data'
 
 const tabs = [
   { name: 'Claude Code', project: 'api', state: 'busy' },
@@ -40,6 +42,7 @@ const features = [
 export default function Home() {
   return (
     <>
+      <JsonLd data={desktopApp} />
       <section className="hero wrap">
         <div className="hero-copy">
           <p className="eyebrow">Free · open source · macOS, Windows, Linux</p>

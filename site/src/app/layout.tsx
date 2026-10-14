@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
+import { JsonLd } from '@/components/JsonLd'
 import { site } from '@/config'
+import { siteGraph } from '@/structured-data'
 import './globals.css'
 
 const display = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-display', display: 'swap' })
@@ -15,6 +17,7 @@ export const metadata: Metadata = {
   description:
     'Run Claude Code, Codex, OpenCode and shells side by side, project by project — and follow them from your phone with the companion app. Free and open source.',
   openGraph: { type: 'website', siteName: 'AlmaStudio', images: ['/main-window.png'] },
+  manifest: '/site.webmanifest',
 }
 
 export const viewport: Viewport = {
@@ -34,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main id="main">{children}</main>
         <Footer />
+        <JsonLd data={siteGraph} />
       </body>
     </html>
   )

@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Downloads } from '@/components/Downloads'
+import { JsonLd } from '@/components/JsonLd'
 import { Phone } from '@/components/Phone'
 import { site } from '@/config'
+import { companionApp } from '@/structured-data'
 
 export const metadata: Metadata = {
   title: 'Companion app',
@@ -28,6 +30,7 @@ const steps = [
 export default function Companion() {
   return (
     <>
+      <JsonLd data={companionApp} />
       <section className="hero wrap">
         <div className="hero-copy">
           <p className="eyebrow">AlmaStudio Companion App · iPhone, iPad, Android</p>
