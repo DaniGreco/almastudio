@@ -9,6 +9,16 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-10-15
+
+### Added
+
+- Find text in an open file with ⌘F (Ctrl+F on Windows and Linux), or with
+  the new search button in the file's toolbar. In the source it opens the
+  editor's find and replace; in a Markdown preview a find bar highlights
+  every match and steps through them with Enter and Shift+Enter. The menu
+  item is now just "Find…", since it works in terminals and files alike.
+
 ## [1.9.1] - 2026-10-14
 
 ### Fixed
