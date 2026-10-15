@@ -16,7 +16,7 @@
     "newTerminal": "Nuova scheda Terminale",
     "closeTab": "Chiudi scheda",
     "edit": "Modifica",
-    "find": "Cerca nel terminale…",
+    "find": "Trova…",
     "view": "Vista",
     "toggleSidebar": "Mostra/nascondi barra progetti",
     "togglePanel": "Mostra/nascondi pannello destro",
@@ -127,6 +127,7 @@
   },
   "find": {
     "placeholder": "Cerca nel terminale",
+    "placeholderFile": "Cerca nel file",
     "next": "Risultato successivo",
     "previous": "Risultato precedente",
     "close": "Chiudi ricerca",

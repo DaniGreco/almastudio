@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener'
-import { Check, Code2, ExternalLink, Eye, RefreshCw, Save } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, Code2, ExternalLink, Eye, RefreshCw, Save, Search, X } from 'lucide-react'
 
 import { GIT_CHANGED_EVENT } from '../hooks/useAutoFetch'
 import { findConflicts } from '../lib/conflicts'
+import { findRanges } from '../lib/findText'
 import { allowPreview, gitMarkResolved, readTextFile, writeTextFile } from '../lib/ipc'
 import { languageOf, previewKindOf } from '../lib/syntax'
 import { useUi } from '../store/ui'
@@ -17,7 +18,7 @@ import type { FileContent, FileTab } from '../lib/types'
 
 type Mode = 'preview' | 'source'
 
-export function FileView({ tab, visible }: { tab: FileTab; visible: boolean }) {
+export function FileView({ tab, visible, focused }: { tab: FileTab; visible: boolean; focused: boolean }) {
   const t = useT()
   const setTabDirty = useUi((s) => s.setTabDirty)
   const pinTab = useWorkspace((s) => s.pinTab)
@@ -37,6 +38,11 @@ export function FileView({ tab, visible }: { tab: FileTab; visible: boolean }) {
   /** Bumped when the file changes, so previews that read it from disk reload. */
   const [version, setVersion] = useState(0)
   const seen = useRef<string | null>(null)
+  /** Bumped to open the editor's search panel. */
+  const [findNonce, setFindNonce] = useState(0)
+  /** Non-zero while the preview's find bar is open; bumped to refocus it. */
+  const [previewFind, setPreviewFind] = useState(0)
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   const dirty = content !== original
   const editable = !!file && !file.binary && !file.truncated
@@ -151,6 +157,25 @@ export function FileView({ tab, visible }: { tab: FileTab; visible: boolean }) {
 
   const language = languageOf(tab.path)
   const showSource = !kind || (!viewOnly && mode === 'source')
+  /** Where ⌘F searches: the editor, the rendered Markdown, or nowhere. */
+  const findTarget = !editable ? null : showSource ? 'source' : kind === 'markdown' ? 'preview' : null
+  const openFind = useCallback(() => {
+    if (findTarget === 'source') setFindNonce((n) => n + 1)
+    if (findTarget === 'preview') setPreviewFind((n) => n + 1)
+  }, [findTarget])
+
+  // ⌘F is a menu item, so it arrives as an event; only the focused pane takes it.
+  useEffect(() => {
+    if (!focused) return
+    window.addEventListener('almastudio:find', openFind)
+    return () => window.removeEventListener('almastudio:find', openFind)
+  }, [focused, openFind])
+
+  // The preview's find bar belongs to the preview.
+  useEffect(() => {
+    if (findTarget !== 'preview') setPreviewFind(0)
+  }, [findTarget])
+
   // An SVG being edited is drawn from the editor's text instead (see below).
   const assetKind =
     kind === 'svg' ? 'image' : kind === 'image' || kind === 'pdf' || kind === 'html' ? kind : null
@@ -178,6 +203,14 @@ export function FileView({ tab, visible }: { tab: FileTab; visible: boolean }) {
           </>
         )}
         <span className="spacer" />
+        {findTarget && (
+          <button
+            className="icon-btn" onClick={openFind}
+            aria-label={t('find.placeholderFile')} title={t('find.placeholderFile')}
+          >
+            <Search size={13} />
+          </button>
+        )}
         {kind && !viewOnly && (
           <Segmented<Mode>
             value={mode}
@@ -217,7 +250,15 @@ export function FileView({ tab, visible }: { tab: FileTab; visible: boolean }) {
         </button>
       </div>
 
-      <div className="diff__body">
+      <div className="fileview__stage">
+      {previewFind > 0 && (
+        <PreviewFind
+          body={bodyRef}
+          focusNonce={previewFind}
+          onClose={() => setPreviewFind(0)}
+        />
+      )}
+      <div className="diff__body" ref={bodyRef}>
         {error && <div className="empty">{error}</div>}
         {showSource ? (
           <>
@@ -235,6 +276,7 @@ export function FileView({ tab, visible }: { tab: FileTab; visible: boolean }) {
                 }}
                 onChange={setContent}
                 onSave={() => void save()}
+                findNonce={findNonce}
               />
             )}
           </>
@@ -253,6 +295,7 @@ export function FileView({ tab, visible }: { tab: FileTab; visible: boolean }) {
           )
         )}
       </div>
+      </div>
 
       {conflict !== null && (
         <ConfirmDialog
@@ -269,6 +312,110 @@ export function FileView({ tab, visible }: { tab: FileTab; visible: boolean }) {
           onConfirm={() => void write()}
         />
       )}
+    </div>
+  )
+}
+
+// ------------------------------------------------------- find in preview ---
+
+const FIND_ALL = 'almastudio-find'
+const FIND_ACTIVE = 'almastudio-find-active'
+
+/** CSS Custom Highlights, where the webview has them (all current ones do). */
+function highlights(): Map<string, unknown> | null {
+  const registry = (CSS as unknown as { highlights?: Map<string, unknown> }).highlights
+  return registry && typeof (window as { Highlight?: unknown }).Highlight === 'function' ? registry : null
+}
+
+function paint(name: string, ranges: Range[]) {
+  const registry = highlights()
+  if (!registry) return
+  if (ranges.length === 0) registry.delete(name)
+  else {
+    const H = (window as unknown as { Highlight: new (...r: Range[]) => unknown }).Highlight
+    registry.set(name, new H(...ranges))
+  }
+}
+
+/** The find bar over a rendered preview, like the terminal's. */
+function PreviewFind({
+  body, focusNonce, onClose,
+}: { body: React.RefObject<HTMLDivElement | null>; focusNonce: number; onClose: () => void }) {
+  const t = useT()
+  const input = useRef<HTMLInputElement>(null)
+  const [term, setTerm] = useState('')
+  const [ranges, setRanges] = useState<Range[]>([])
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    input.current?.focus()
+    input.current?.select()
+  }, [focusNonce])
+
+  // Searched again whenever the preview re-renders, e.g. after an edit.
+  useEffect(() => {
+    const root = body.current
+    if (!root) return
+    const run = () => {
+      const found = findRanges(root, term)
+      setRanges(found)
+      setIndex((i) => (i < found.length ? i : 0))
+    }
+    run()
+    const observer = new MutationObserver(run)
+    observer.observe(root, { childList: true, subtree: true, characterData: true })
+    return () => observer.disconnect()
+  }, [body, term])
+
+  useEffect(() => {
+    paint(FIND_ALL, ranges)
+    const active = ranges[index]
+    paint(FIND_ACTIVE, active ? [active] : [])
+    active?.startContainer.parentElement?.scrollIntoView({ block: 'center' })
+  }, [ranges, index])
+
+  // Nothing stays painted once the bar is gone.
+  useEffect(() => () => {
+    paint(FIND_ALL, [])
+    paint(FIND_ACTIVE, [])
+  }, [])
+
+  const step = (by: number) => {
+    if (ranges.length) setIndex((i) => (i + by + ranges.length) % ranges.length)
+  }
+
+  return (
+    <div className="findbar">
+      <input
+        ref={input}
+        className="findbar__input"
+        value={term}
+        placeholder={t('find.placeholderFile')}
+        onChange={(e) => {
+          setTerm(e.target.value)
+          setIndex(0)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') step(e.shiftKey ? -1 : 1)
+          if (e.key === 'Escape') onClose()
+        }}
+      />
+      <span className="findbar__count subtle">
+        {term
+          ? ranges.length > 0
+            ? t('find.results', { i: index + 1, n: ranges.length })
+            : t('find.noResults')
+          : ''}
+      </span>
+      <button className="icon-btn icon-btn--tiny" aria-label={t('find.previous')} onClick={() => step(-1)}>
+        <ArrowUp size={13} />
+      </button>
+      <button className="icon-btn icon-btn--tiny" aria-label={t('find.next')} onClick={() => step(1)}>
+        <ArrowDown size={13} />
+      </button>
+      <button className="icon-btn icon-btn--tiny" aria-label={t('find.close')} onClick={onClose}>
+        <X size={13} />
+      </button>
     </div>
   )
 }

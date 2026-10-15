@@ -16,7 +16,7 @@
     "newTerminal": "New Terminal Tab",
     "closeTab": "Close Tab",
     "edit": "Edit",
-    "find": "Find in Terminal…",
+    "find": "Find…",
     "view": "View",
     "toggleSidebar": "Toggle Projects Sidebar",
     "togglePanel": "Toggle Right Panel",
@@ -127,6 +127,7 @@
   },
   "find": {
     "placeholder": "Find in terminal",
+    "placeholderFile": "Find in file",
     "next": "Next match",
     "previous": "Previous match",
     "close": "Close find",

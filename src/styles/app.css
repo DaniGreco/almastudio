@@ -821,6 +821,18 @@
 }
 .findbar__count { font-size: 11px; min-width: 56px; text-align: right; padding-right: 4px; }
 
+/* A file tab's body, with room for the preview's find bar over it. */
+.fileview__stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fileview__stage > .findbar { right: 20px; }
+::highlight(almastudio-find) { background-color: color-mix(in srgb, var(--yellow) 34%, transparent); }
+::highlight(almastudio-find-active) { background-color: color-mix(in srgb, var(--yellow) 70%, transparent); color: var(--bg); }
+
 /* ------------------------------------------------------ syntax colours --- */
 /* highlight.js class names mapped onto theme tokens, so highlighting follows
    whichever theme is active rather than shipping its own stylesheet. */

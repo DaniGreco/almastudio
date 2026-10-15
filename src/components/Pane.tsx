@@ -80,7 +80,7 @@ function TabContent({
   if (tab.kind === 'graph') return <GitGraphView tab={tab} visible={visible} />
   if (tab.kind === 'review') return <ReviewView tab={tab} visible={visible} focused={focused} />
   // Files and diffs are keyed: a preview's pane goes on to show the next one.
-  return <FileView key={tab.id} tab={tab} visible={visible} />
+  return <FileView key={tab.id} tab={tab} visible={visible} focused={focused} />
 }
 
 function PaneHeader({ tab, leaf, focused }: { tab: Tab; leaf: LeafNode; focused: boolean }) {

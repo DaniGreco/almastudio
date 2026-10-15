@@ -53,7 +53,8 @@ of blocked threads — no Electron, no per-tab browser process.
 - **Code and Markdown** — syntax highlighting in the editor and in diffs,
   themed from the same tokens as the rest of the app. Files are editable, with
   explicit save and a conflict check. Markdown opens as a rendered preview with
-  a toggle back to source.
+  a toggle back to source. ⌘F finds text in the open file, in the editor or in
+  the rendered preview.
 - **Files** — VS Code-style type icons throughout, and create / rename /
   move-to-trash for files and folders from the tree.
 - **At a glance** — a tab spins while its harness is producing output and shows

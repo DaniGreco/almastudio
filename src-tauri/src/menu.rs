@@ -34,7 +34,7 @@ fn fallback(key: &str) -> &'static str {
         "menu.copy" => "Copy",
         "menu.paste" => "Paste",
         "menu.selectAll" => "Select All",
-        "menu.find" => "Find in Terminal…",
+        "menu.find" => "Find…",
         "menu.findInFiles" => "Find in Files…",
         "menu.view" => "View",
         "menu.toggleSidebar" => "Toggle Projects Sidebar",

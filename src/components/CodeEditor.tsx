@@ -22,6 +22,8 @@ interface Props {
   reveal?: FileReveal
   /** The buttons on merge conflicts; without labels, conflicts are not marked. */
   conflictLabels?: ConflictLabels
+  /** Bumped to open the search panel (⌘F reaches the app menu, not the editor). */
+  findNonce?: number
 }
 
 /** Dynamic import of just the grammar this file needs. */
@@ -69,7 +71,7 @@ async function languageFor(path: string) {
 }
 
 export function CodeEditor({
-  value, path, onChange, onSave, readOnly, reveal, conflictLabels,
+  value, path, onChange, onSave, readOnly, reveal, conflictLabels, findNonce,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
@@ -87,6 +89,20 @@ export function CodeEditor({
   const revealedRef = useRef<number | null>(null)
   /** CodeMirror's view class, loaded with the editor, for its scroll effect. */
   const viewClassRef = useRef<typeof EditorView | null>(null)
+  /** The search command, loaded with the editor. */
+  const openSearchRef = useRef<((view: EditorView) => boolean) | null>(null)
+  const findNonceRef = useRef(findNonce)
+  findNonceRef.current = findNonce
+  /** The find request last carried out, as with reveal above. */
+  const foundRef = useRef<number | undefined>(undefined)
+
+  const openFindNow = () => {
+    const view = viewRef.current
+    const nonce = findNonceRef.current
+    if (!view || !openSearchRef.current || !nonce || foundRef.current === nonce) return
+    foundRef.current = nonce
+    openSearchRef.current(view)
+  }
 
   const revealNow = () => {
     const view = viewRef.current
@@ -116,7 +132,7 @@ export function CodeEditor({
         { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, rectangularSelection, crosshairCursor },
         { defaultKeymap, history, historyKeymap, indentWithTab },
         { HighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching, foldGutter, foldKeymap },
-        { searchKeymap, highlightSelectionMatches },
+        { searchKeymap, highlightSelectionMatches, openSearchPanel },
         { closeBrackets, closeBracketsKeymap, autocompletion, completionKeymap },
         { tags },
         { conflictMarkers },
@@ -320,7 +336,9 @@ export function CodeEditor({
 
       viewRef.current = new EditorView({ state, parent: host })
       viewClassRef.current = EditorView
+      openSearchRef.current = openSearchPanel
       revealNow()
+      openFindNow()
     })()
 
     return () => {
@@ -346,6 +364,11 @@ export function CodeEditor({
   // out as the editor is built.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => revealNow(), [reveal?.nonce])
+
+  // Opening the panel again moves the cursor back into its field and takes
+  // the current selection as the term, as ⌘F does in an editor.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => openFindNow(), [findNonce])
 
   return <div ref={hostRef} className="editor" />
 }
