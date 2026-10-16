@@ -9,6 +9,20 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-10-16
+
+### Added
+
+- Terminals show images drawn with the kitty graphics protocol, the way
+  Claude Code draws them. Screenshots, mockups and videos that Claude makes
+  can now be seen inline in a Claude tab, for example with the
+  [show-your-work](https://github.com/iamumeransari/claude-show-your-work)
+  plugin, which we recommend: it shows Claude's visual work right in the
+  conversation. Install it from Claude Code with
+  `/plugin marketplace add https://github.com/iamumeransari/claude-show-your-work.git#releases`,
+  then `/plugin install show-your-work@iamumeransari`. Restart open Claude
+  tabs to turn images on.
+
 ## [1.9.2] - 2026-10-15
 
 ### Added
