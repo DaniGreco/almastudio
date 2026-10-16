@@ -440,6 +440,25 @@ pub fn read_file_base64(path: String, max_bytes: Option<u64>) -> Result<String, 
     Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
 }
 
+/// An image a program in a terminal asked to show by its path (the kitty
+/// graphics protocol's file transmission). Only regular files: a device such
+/// as /dev/zero would never finish reading.
+#[tauri::command]
+pub fn read_terminal_image(path: String) -> Result<String, String> {
+    use base64::Engine as _;
+    const LIMIT: u64 = 64 * 1024 * 1024;
+    let p = checked(&path)?;
+    let meta = fs::metadata(&p).map_err(|e| e.to_string())?;
+    if !meta.is_file() {
+        return Err("not a regular file".into());
+    }
+    if meta.len() > LIMIT {
+        return Err(format!("file is larger than {LIMIT} bytes"));
+    }
+    let bytes = fs::read(&p).map_err(|e| e.to_string())?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
+}
+
 /// Lets the file viewer load one selected `path` through the asset protocol.
 ///
 /// The scope starts empty and grows only with what the user opens. The

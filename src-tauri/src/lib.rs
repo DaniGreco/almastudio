@@ -391,6 +391,7 @@ pub fn run() {
             fsx::trash_path,
             fsx::write_text_file,
             fsx::read_file_base64,
+            fsx::read_terminal_image,
             fsx::allow_preview,
             fsx::path_exists,
             search::search_text,

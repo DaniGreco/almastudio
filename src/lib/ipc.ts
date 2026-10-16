@@ -37,8 +37,9 @@ export interface SpawnOptions {
 
 export const ptySpawn = (options: SpawnOptions) => invoke<void>('pty_spawn', { options })
 export const ptyWrite = (id: string, data: string) => invoke<void>('pty_write', { id, data })
-export const ptyResize = (id: string, cols: number, rows: number) =>
-  invoke<void>('pty_resize', { id, cols, rows })
+export const ptyResize = (
+  id: string, cols: number, rows: number, width?: number, height?: number,
+) => invoke<void>('pty_resize', { id, cols, rows, width, height })
 export const ptyKill = (id: string) => invoke<void>('pty_kill', { id })
 export const ptyStatus = (id: string) =>
   invoke<{ running: boolean; alive: boolean; exitCode: number }>('pty_status', { id })
@@ -240,6 +241,9 @@ export const writeTextFile = (path: string, contents: string, root?: string) =>
   invoke<void>('write_text_file', { path, contents, root: root ?? null })
 export const readFileBase64 = (path: string, maxBytes?: number) =>
   invoke<string>('read_file_base64', { path, maxBytes })
+/** An image file a terminal program asked to show, as base64. */
+export const readTerminalImage = (path: string) =>
+  invoke<string>('read_terminal_image', { path })
 export const pathExists = (path: string, root?: string) =>
   invoke<boolean>('path_exists', { path, root: root ?? null })
 /** Lets the asset protocol serve one selected file to the viewer. */

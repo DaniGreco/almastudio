@@ -168,6 +168,9 @@ pub struct Session {
     /// client has the pty sized for its own screen, so the desktop gets its
     /// width back the moment it is used again.
     desktop_size: (u16, u16),
+    /// The desktop terminal's size in pixels, (0, 0) when unknown. Programs
+    /// that draw images read it to size them for the cells.
+    desktop_pixels: (u16, u16),
     /// The remote client the pty is currently sized for, if any.
     remote_owner: Option<u64>,
 }
@@ -265,6 +268,7 @@ impl PtyManager {
                 last_output,
                 busy,
                 desktop_size: (opts.cols, opts.rows),
+                desktop_pixels: (0, 0),
                 remote_owner: None,
             },
         );
@@ -283,14 +287,21 @@ impl PtyManager {
 
     /// A resize from the desktop terminal. While a remote client owns the
     /// size it is only recorded, and applied once the desktop takes it back.
-    pub fn resize(&self, id: &str, cols: u16, rows: u16) -> anyhow::Result<()> {
+    pub fn resize(
+        &self,
+        id: &str,
+        cols: u16,
+        rows: u16,
+        pixels: (u16, u16),
+    ) -> anyhow::Result<()> {
         let mut guard = self.sessions.lock();
         let s = guard
             .get_mut(id)
             .ok_or_else(|| anyhow::anyhow!("no session {id}"))?;
         s.desktop_size = (cols, rows);
+        s.desktop_pixels = pixels;
         if s.remote_owner.is_none() {
-            apply_size(s, cols, rows)?;
+            apply_size(s, cols, rows, pixels)?;
         }
         Ok(())
     }
@@ -310,7 +321,7 @@ impl PtyManager {
             .ok_or_else(|| anyhow::anyhow!("no session {id}"))?;
         let changed = s.remote_owner != Some(client);
         s.remote_owner = Some(client);
-        apply_size(s, cols, rows)?;
+        apply_size(s, cols, rows, (0, 0))?;
         Ok(changed)
     }
 
@@ -379,12 +390,12 @@ impl PtyManager {
     }
 }
 
-fn apply_size(s: &Session, cols: u16, rows: u16) -> anyhow::Result<()> {
+fn apply_size(s: &Session, cols: u16, rows: u16, pixels: (u16, u16)) -> anyhow::Result<()> {
     s.master.resize(PtySize {
         rows: rows.max(2),
         cols: cols.max(10),
-        pixel_width: 0,
-        pixel_height: 0,
+        pixel_width: pixels.0,
+        pixel_height: pixels.1,
     })?;
     Ok(())
 }
@@ -392,7 +403,7 @@ fn apply_size(s: &Session, cols: u16, rows: u16) -> anyhow::Result<()> {
 fn restore_desktop(s: &mut Session) -> bool {
     s.remote_owner = None;
     let (cols, rows) = s.desktop_size;
-    let _ = apply_size(s, cols, rows);
+    let _ = apply_size(s, cols, rows, s.desktop_pixels);
     true
 }
 
@@ -686,6 +697,10 @@ fn build_command(opts: &SpawnOptions) -> anyhow::Result<CommandBuilder> {
     cmd.env("ALMASTUDIO", "1");
     // Some CLIs use this to decide whether to draw a TUI.
     cmd.env("TERM_PROGRAM", "AlmaStudio");
+    // The terminal draws images sent with the kitty graphics protocol as
+    // Unicode placeholders. Claude Code asks the terminal's name before using
+    // them and knows only kitty and Ghostty by name, so it is told outright.
+    cmd.env("CLAUDE_CODE_FORCE_TERMINAL_IMAGES", "1");
     for (k, v) in &opts.env {
         cmd.env(k, v);
     }
@@ -716,8 +731,11 @@ pub fn pty_resize(
     id: String,
     cols: u16,
     rows: u16,
+    width: Option<u16>,
+    height: Option<u16>,
 ) -> Result<(), String> {
-    mgr.resize(&id, cols, rows).map_err(|e| e.to_string())
+    let pixels = (width.unwrap_or(0), height.unwrap_or(0));
+    mgr.resize(&id, cols, rows, pixels).map_err(|e| e.to_string())
 }
 
 /// The desktop terminal is in use again: it takes the pty's size back from a
@@ -834,6 +852,7 @@ mod tests {
             last_output: Arc::new(AtomicU64::new(0)),
             busy: Arc::new(AtomicBool::new(false)),
             desktop_size: (cols, rows),
+            desktop_pixels: (0, 0),
             remote_owner: None,
         }
     }
@@ -861,7 +880,7 @@ mod tests {
         assert!(!mgr.resize_remote("t", 7, 46, 30).unwrap());
 
         // A desktop resize while the phone owns the size is only recorded.
-        mgr.resize("t", 150, 50).unwrap();
+        mgr.resize("t", 150, 50, (0, 0)).unwrap();
         assert_eq!(size_of(&mgr, "t"), (46, 30));
 
         // Another client cannot release what it does not hold.

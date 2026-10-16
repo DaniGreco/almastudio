@@ -24,6 +24,7 @@ import { useWorkspace } from '../store/workspace'
 import { useRemote } from '../store/remote'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n'
+import { TerminalImages } from '../lib/terminalImages'
 import type { TerminalTab } from '../lib/types'
 
 /**
@@ -58,10 +59,11 @@ export function TerminalView({ tab, visible, focused }: Props) {
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
   const searchRef = useRef<SearchAddon | null>(null)
+  const imagesRef = useRef<TerminalImages | null>(null)
   /** Highest stream offset already written, used to drop replayed batches. */
   const writtenTo = useRef(0)
   const spawning = useRef(false)
-  /** The size the pty was last told, as `colsxrows`; null when unknown. */
+  /** The size the pty was last told, as `colsxrows@WxH`; null when unknown. */
   const ptySize = useRef<string | null>(null)
 
   const settings = useSettings((s) => s.settings)
@@ -98,9 +100,11 @@ export function TerminalView({ tab, visible, focused }: Props) {
   const syncPtySize = useCallback(() => {
     const term = termRef.current
     if (!term) return
-    const size = `${term.cols}x${term.rows}`
+    // In pixels too: programs that draw images size them from it.
+    const px = imagesRef.current?.screenSize() ?? { width: 0, height: 0 }
+    const size = `${term.cols}x${term.rows}@${px.width}x${px.height}`
     if (ptySize.current === size) return
-    void ptyResize(tab.id, term.cols, term.rows)
+    void ptyResize(tab.id, term.cols, term.rows, px.width, px.height)
       .then(() => {
         ptySize.current = size
       })
@@ -119,7 +123,10 @@ export function TerminalView({ tab, visible, focused }: Props) {
         writtenTo.current = 0
         // A tab starting as it opens keeps the output restored from its last
         // run above the separator; any other start begins on a clean screen.
-        if (!keepScreen) term.reset()
+        if (!keepScreen) {
+          term.reset()
+          imagesRef.current?.reset()
+        }
         // Which Claude conversation this tab is on, so it resumes its own.
         const claudeSession =
           tab.kind === 'claude' ? await claudeSessionFor(tab.id, resume) : undefined
@@ -134,7 +141,7 @@ export function TerminalView({ tab, visible, focused }: Props) {
           claudeSession,
         })
         await ptySpawn(options)
-        ptySize.current = `${cols}x${rows}`
+        ptySize.current = `${cols}x${rows}@0x0`
         // The terminal may have been resized while the process started.
         syncPtySize()
         setTabStatus(tab.id, 'running')
@@ -176,6 +183,8 @@ export function TerminalView({ tab, visible, focused }: Props) {
       linkHandler: {
         activate: (_e, uri) => void openUrl(uri).catch(() => {}),
       },
+      // Programs that draw images ask for the cell size in pixels (CSI 16 t).
+      windowOptions: { getCellSizePixels: true, getWinSizePixels: true },
     })
     const fit = new FitAddon()
     const search = new SearchAddon()
@@ -222,6 +231,15 @@ export function TerminalView({ tab, visible, focused }: Props) {
     let ready = false
     /** Restored output is being parsed; see onData. */
     let replaying = false
+    // Images sent with the kitty graphics protocol. Answers to its commands
+    // go to the program like those xterm gives, and are held back the same
+    // way while replaying.
+    const images = new TerminalImages(term, (data) => {
+      if (!replaying) void ptyWrite(tab.id, data).catch(() => {})
+    })
+    images.attach()
+    imagesRef.current = images
+
     /** Resolves once everything written so far has been parsed. */
     const flushed = () => new Promise<void>((resolve) => term.write('', resolve))
 
@@ -308,7 +326,7 @@ export function TerminalView({ tab, visible, focused }: Props) {
       if (end <= writtenTo.current) return // already covered by the snapshot
       const slice = start < writtenTo.current ? bytes.subarray(writtenTo.current - start) : bytes
       writtenTo.current = end
-      term.write(slice)
+      term.write(images.write(slice))
     }
 
     void (async () => {
@@ -365,12 +383,14 @@ export function TerminalView({ tab, visible, focused }: Props) {
           // start, it used to be parsed after, and the answers reached the
           // new process before it had turned echo off.
           replaying = true
-          term.write(snap.bytes)
+          term.write(images.write(snap.bytes))
           if (snap.live) {
             writtenTo.current = snap.end
           } else {
             await flushed()
             if (disposed) return
+            // Like the CAN below, for a graphics command the output ends in.
+            images.abandon()
             term.write(
               defaultModes(term) +
                 '\r\n\x1b[2m' + '─'.repeat(Math.max(8, term.cols - 2)) + '\x1b[0m\r\n',
@@ -462,6 +482,8 @@ export function TerminalView({ tab, visible, focused }: Props) {
       onResize.dispose()
       searchResults.dispose()
       for (const un of unlisteners) un()
+      images.dispose()
+      imagesRef.current = null
       term.dispose()
       termRef.current = null
       fitRef.current = null

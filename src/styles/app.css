@@ -321,6 +321,9 @@
 .term__body { position: relative; flex: 1 1 auto; min-height: 0; }
 .term__host { position: absolute; inset: 6px 2px 2px 8px; }
 .term__host .xterm { height: 100%; }
+/* Images a program draws (kitty graphics), over the text and under xterm's
+   decorations; clicks go through to the text. */
+.term__host .term__images { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 .term__host .xterm-viewport { background: transparent !important; }
 /* xterm's viewport is the only scrolling element in a terminal, so styling
    its scrollbar switches it from the platform's auto-hiding overlay (macOS,
