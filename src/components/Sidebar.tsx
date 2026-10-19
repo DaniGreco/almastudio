@@ -49,6 +49,9 @@ export function Sidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
   const dropCategory = useDrag((s) =>
     s.target?.kind === 'project-slot' ? (s.target.category ?? null) : null,
   )
+  const springProject = useDrag((s) =>
+    s.springTarget?.kind === 'project' ? s.springTarget.id : null,
+  )
   const [editing, setEditing] = useState<Project | 'new' | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<Project | null>(null)
   const [menu, setMenu] = useState<{ anchor: HTMLElement; project: Project } | null>(null)
@@ -92,6 +95,7 @@ export function Sidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
           lined && dropIndex === index + 1 ? 'project--drop-after' : '',
           dragIndex === index ? 'project--dragging' : '',
           canReorder ? 'project--reorderable' : '',
+          springProject === p.id ? 'spring' : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -101,6 +105,7 @@ export function Sidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
         data-drop-project
         data-index={index}
         data-category={category}
+        data-spring-project={p.id}
         onPointerDown={
           canReorder
             ? (e) => beginPointerDrag(e, { kind: 'project', id: p.id, index, label: p.name })

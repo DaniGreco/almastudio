@@ -1204,6 +1204,20 @@ img, a { -webkit-user-drag: none; }
 .project--drop-after::after { bottom: -2px; }
 .project--reorderable { cursor: grab; }
 
+/* A file dragged in from outside, resting on a project or a tab: a fill
+   sweeps across it and, once full, it comes to the front (see useFileDrop).
+   The duration matches SPRING_DELAY in lib/dragDrop.ts. */
+.spring {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--project-row-accent, var(--project-accent)) 28%, transparent),
+    color-mix(in srgb, var(--project-row-accent, var(--project-accent)) 28%, transparent)
+  );
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  animation: spring-fill 700ms linear forwards;
+}
+@keyframes spring-fill { to { background-size: 100% 100%; } }
+
 .discovery__hint {
   margin: 0;
   padding: 0 var(--sp-4) var(--sp-3);

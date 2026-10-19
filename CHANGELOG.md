@@ -9,6 +9,13 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+### Added
+
+- A file dragged in from outside — a screenshot, say — opens the project or
+  tab it is held over for a moment, as folders do in Finder. A fill sweeps
+  across the target while it waits; once it opens, carry on to one of its
+  terminals and drop the file there, without starting the drag over.
+
 ## [1.9.3] - 2026-10-16
 
 ### Added
