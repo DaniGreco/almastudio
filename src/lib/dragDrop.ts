@@ -44,7 +44,18 @@ interface DragState {
   y: number
   /** Terminal tab that a file dragged in from outside would be dropped into. */
   fileDropTab: string | null
+  /**
+   * Project or tab that a file dragged in from outside is held over: kept
+   * there for `SPRING_DELAY` it comes to the front, so the file can then be
+   * dropped into one of its terminals.
+   */
+  springTarget: SpringTarget | null
 }
+
+export type SpringTarget = { kind: 'project' | 'group'; id: string }
+
+/** How long a dragged file must rest on a project or a tab to open it. Matches `.spring` in app.css. */
+export const SPRING_DELAY = 700
 
 export const useDrag = create<DragState>(() => ({
   item: null,
@@ -52,6 +63,7 @@ export const useDrag = create<DragState>(() => ({
   x: 0,
   y: 0,
   fileDropTab: null,
+  springTarget: null,
 }))
 
 type Rect = Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>

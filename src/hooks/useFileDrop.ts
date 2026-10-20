@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { platform } from '@tauri-apps/plugin-os'
 
-import { useDrag } from '../lib/dragDrop'
+import { SPRING_DELAY, useDrag, type SpringTarget } from '../lib/dragDrop'
 import { quotePaths } from '../lib/shellQuote'
 import { useUi } from '../store/ui'
 import { useWorkspace } from '../store/workspace'
@@ -12,6 +12,10 @@ import { useWorkspace } from '../store/workspace'
  * or a harness — their paths are typed into it the way a native terminal
  * does; dropped anywhere else they are ignored. Without this the webview's
  * default would navigate to the file, replacing the whole app with it.
+ *
+ * Held for a moment over a project in the sidebar or a tab in the strip, the
+ * file brings it to the front, so a screenshot can reach a terminal that was
+ * not on screen when the drag began.
  */
 export function useFileDrop() {
   useEffect(() => {
@@ -27,6 +31,35 @@ export function useFileDrop() {
       const { x, y } = toCss(position)
       return document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-terminal-tab]') ?? null
     }
+    /** The project or tab under the point, unless it is already in front. */
+    const springAt = (position: { x: number; y: number }): SpringTarget | null => {
+      const { x, y } = toCss(position)
+      const el = document
+        .elementFromPoint(x, y)
+        ?.closest<HTMLElement>('[data-spring-project], [data-spring-group]')
+      if (!el) return null
+      const ws = useWorkspace.getState()
+      const project = el.dataset.springProject
+      if (project) return project === ws.activeProjectId ? null : { kind: 'project', id: project }
+      const group = el.dataset.springGroup!
+      const active = ws.activeProjectId ? ws.workspaces[ws.activeProjectId]?.activeGroupId : undefined
+      return group === active ? null : { kind: 'group', id: group }
+    }
+
+    let springTimer: ReturnType<typeof setTimeout> | undefined
+    const spring = (target: SpringTarget | null) => {
+      const current = useDrag.getState().springTarget
+      if (current?.kind === target?.kind && current?.id === target?.id) return
+      clearTimeout(springTimer)
+      useDrag.setState({ springTarget: target })
+      if (!target) return
+      springTimer = setTimeout(() => {
+        useDrag.setState({ springTarget: null })
+        const ws = useWorkspace.getState()
+        if (target.kind === 'project') ws.setActiveProject(target.id)
+        else ws.setActiveGroup(target.id)
+      }, SPRING_DELAY)
+    }
 
     // Text or a link dragged from another app arrives here too, with no path.
     let carryingFiles = false
@@ -41,12 +74,15 @@ export function useFileDrop() {
             useDrag.setState({
               fileDropTab: carryingFiles ? terminalAt(payload.position)?.dataset.terminalTab ?? null : null,
             })
+            spring(carryingFiles ? springAt(payload.position) : null)
             break
           case 'over':
             if (!carryingFiles) break
             useDrag.setState({ fileDropTab: terminalAt(payload.position)?.dataset.terminalTab ?? null })
+            spring(springAt(payload.position))
             break
           case 'drop': {
+            spring(null)
             useDrag.setState({ fileDropTab: null })
             const term = terminalAt(payload.position)
             const tabId = term?.dataset.terminalTab
@@ -61,6 +97,7 @@ export function useFileDrop() {
             break
           }
           case 'leave':
+            spring(null)
             useDrag.setState({ fileDropTab: null })
             break
         }
@@ -72,6 +109,7 @@ export function useFileDrop() {
 
     return () => {
       disposed = true
+      clearTimeout(springTimer)
       unlisten?.()
     }
   }, [])

@@ -90,6 +90,7 @@ function GroupChip({
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const [renaming, setRenaming] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const spring = useDrag((s) => s.springTarget?.kind === 'group' && s.springTarget.id === group.id)
 
   if (!tab) return null
   const panes = allLeaves(group.layout).length
@@ -106,9 +107,10 @@ function GroupChip({
         ref={ref}
         className={`tab${active ? ' tab--active' : ''}${dropBefore ? ' tab--drop' : ''}${
           dropAfter ? ' tab--drop-after' : ''
-        }${isPreview(tab) ? ' tab--preview' : ''}`}
+        }${isPreview(tab) ? ' tab--preview' : ''}${spring ? ' spring' : ''}`}
         data-drop-tab-chip
         data-index={index}
+        data-spring-group={group.id}
         onPointerDown={(e) => {
           if (!renaming) beginPointerDrag(e, { kind: 'tab', id: group.id, label })
         }}
