@@ -9,6 +9,8 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+## [1.9.5] - 2026-10-20
+
 ### Added
 
 - A file dragged in from outside — a screenshot, say — opens the project or
