@@ -24,6 +24,11 @@ use super::{server, RemoteHub};
 const ROOM_CONTEXT: &[u8] = b"almastudio-room-v1";
 const AUTH_CONTEXT: &[u8] = b"almastudio-relay-auth-v1";
 const MAX_BACKOFF: Duration = Duration::from_secs(60);
+/// The relay pings every 20 s. Nothing for this long means the connection is
+/// dead even if the socket says otherwise — after the Mac changes network, say,
+/// a socket bound to an address it no longer has stays "established" forever
+/// on a side that only reads, and the desktop would never come back online.
+const SILENCE_LIMIT: Duration = Duration::from_secs(60);
 
 pub fn room_of(public_key: &[u8]) -> String {
     let mut h = Sha256::new();
@@ -83,10 +88,19 @@ async fn session(
     let base = base(url);
 
     super::push::ensure_tls();
-    let (mut ws, _) = connect_async(format!("{base}/v1/desktop/{room}")).await?;
+    let (mut ws, _) = tokio::time::timeout(
+        SILENCE_LIMIT,
+        connect_async(format!("{base}/v1/desktop/{room}")),
+    )
+    .await
+    .map_err(|_| anyhow::anyhow!("the relay did not answer"))??;
 
     // Prove this desktop holds the key its room is named after.
-    let Some(Ok(Message::Text(text))) = ws.next().await else {
+    let first = tokio::time::timeout(SILENCE_LIMIT, ws.next())
+        .await
+        .ok()
+        .flatten();
+    let Some(Ok(Message::Text(text))) = first else {
         anyhow::bail!("relay closed during sign-in");
     };
     let challenge: Challenge = serde_json::from_str(&text)?;
@@ -102,7 +116,11 @@ async fn session(
     h.update(&nonce);
     let auth = json!({ "t": "auth", "key": identity.public, "proof": b64url(&h.finalize()) });
     ws.send(Message::Text(auth.to_string().into())).await?;
-    match ws.next().await {
+    match tokio::time::timeout(SILENCE_LIMIT, ws.next())
+        .await
+        .ok()
+        .flatten()
+    {
         Some(Ok(Message::Text(t))) if t.contains("\"ready\"") => {}
         _ => anyhow::bail!("the relay refused this desktop"),
     }
@@ -111,7 +129,9 @@ async fn session(
 
     loop {
         tokio::select! {
-            msg = ws.next() => match msg {
+            msg = tokio::time::timeout(SILENCE_LIMIT, ws.next()) => match msg {
+                Err(_) => anyhow::bail!("the relay went silent"),
+                Ok(msg) => match msg {
                 Some(Ok(Message::Text(t))) => {
                     let Ok(open) = serde_json::from_str::<Open>(&t) else { continue };
                     let app = app.clone();
@@ -126,6 +146,7 @@ async fn session(
                 Some(Ok(Message::Close(_))) | None => anyhow::bail!("the relay closed the connection"),
                 Some(Err(e)) => return Err(e.into()),
                 Some(Ok(_)) => {}
+                },
             },
             _ = shutdown.changed() => {
                 let _ = ws.close(None).await;
