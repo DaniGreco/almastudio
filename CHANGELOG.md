@@ -9,6 +9,15 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+## [1.9.4] - 2026-10-20
+
+### Fixed
+
+- The companion app could stop reaching the computer through the relay
+  after the computer changed network or IP address, while notifications kept
+  arriving. The computer now notices a relay connection that has gone quiet
+  and reconnects within a minute.
+
 ## [1.9.3] - 2026-10-16
 
 ### Added
