@@ -245,6 +245,8 @@ export interface Settings {
      * the keyboard layout puts on it.
      */
     optionIsMeta: boolean
+    /** A click in Claude Code's prompt moves its caret there. */
+    clickMovesCursor: boolean
   }
   defaultHarness: HarnessKind
   harness: Record<HarnessKind, HarnessConfig>

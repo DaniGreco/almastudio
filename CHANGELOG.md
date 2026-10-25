@@ -9,6 +9,13 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+### Added
+
+- A click in Claude Code's prompt moves the cursor there, as the mouse does
+  in Codex and OpenCode, instead of only by the arrow keys. It works across
+  lines and long lines that wrap; dragging still selects text. It can be
+  turned off in Settings → Terminal.
+
 ## [1.9.5] - 2026-10-20
 
 ### Added

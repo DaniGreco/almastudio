@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS: Settings = {
     // Off, as in Terminal.app: on most non-US layouts Option types
     // characters that have no other key.
     optionIsMeta: false,
+    clickMovesCursor: true,
   },
   defaultHarness: 'claude',
   harness: {

@@ -25,6 +25,7 @@ import { useRemote } from '../store/remote'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n'
 import { TerminalImages } from '../lib/terminalImages'
+import { nextStep, promptRows, type Cell, type Point, type RowReader } from '../lib/clickCursor'
 import type { TerminalTab } from '../lib/types'
 
 /**
@@ -670,6 +671,121 @@ export function TerminalView({ tab, visible, focused }: Props) {
     })
     return () => sub.dispose()
   }, [settings.terminal.copyOnSelect])
+
+  // ------------------------------------------------- click to move caret --
+  // A plain click in Claude Code's prompt takes its caret there, as the
+  // mouse does in Codex and OpenCode; see lib/clickCursor. Never while the
+  // program reports the mouse itself, nor in a full-screen one.
+  useEffect(() => {
+    const term = termRef.current
+    const host = hostRef.current
+    if (!term || !host || tab.kind !== 'claude' || !settings.terminal.clickMovesCursor) return
+
+    const scratch = term.buffer.active.getNullCell()
+    const read: RowReader = (y) => {
+      const line = term.buffer.active.getLine(y)
+      if (!line) return undefined
+      const cells: Cell[] = []
+      for (let x = 0; x < term.cols; x++) {
+        const c = line.getCell(x, scratch)
+        cells.push(
+          c
+            ? { chars: c.getChars(), width: c.getWidth(), dim: c.isDim() !== 0 }
+            : { chars: '', width: 1, dim: false },
+        )
+      }
+      return cells
+    }
+    const caret = (): Point => {
+      const b = term.buffer.active
+      return { x: b.cursorX, y: b.baseY + b.cursorY }
+    }
+    const applies = () =>
+      !needsStartRef.current &&
+      term.buffer.active.type === 'normal' &&
+      term.modes.mouseTrackingMode === 'none'
+
+    /** Resolves once the program has redrawn after a key, or gave up on it. */
+    const redrawn = () =>
+      new Promise<void>((resolve) => {
+        let quiet: number | undefined
+        const done = () => {
+          sub.dispose()
+          window.clearTimeout(quiet)
+          window.clearTimeout(limit)
+          resolve()
+        }
+        const sub = term.onWriteParsed(() => {
+          window.clearTimeout(quiet)
+          quiet = window.setTimeout(done, 30)
+        })
+        const limit = window.setTimeout(done, 400)
+      })
+
+    /** Bumped by every click and key, which each end the walk before. */
+    let walk = 0
+    const moveTo = async (target: Point) => {
+      const id = ++walk
+      const start = promptRows(read, caret().y)
+      if (!start) return
+      for (let i = 0; i < 64 && id === walk && applies(); i++) {
+        const from = caret()
+        // The prompt moved — output above it — so the row clicked is gone.
+        if (promptRows(read, from.y)?.first !== start.first) return
+        const keys = nextStep(read, from, target, term.modes.applicationCursorKeysMode)
+        if (!keys) return
+        const wait = redrawn()
+        void ptyWrite(tab.id, keys).catch(() => {})
+        await wait
+        const to = caret()
+        if (to.x === from.x && to.y === from.y) return // the keys did nothing
+      }
+    }
+
+    let down: { clientX: number; clientY: number; target: Point } | null = null
+    const onMouseDown = (e: MouseEvent) => {
+      down = null
+      walk++
+      if (e.button !== 0 || e.detail > 1 || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) {
+        return
+      }
+      const screen = term.element?.querySelector('.xterm-screen')
+      if (!screen || !applies()) return
+      const r = screen.getBoundingClientRect()
+      const cellW = r.width / term.cols
+      const cellH = r.height / term.rows
+      const row = Math.floor((e.clientY - r.top) / cellH)
+      if (row < 0 || row >= term.rows) return
+      // To the nearest gap between characters, where a caret can sit.
+      const x = Math.max(0, Math.min(term.cols, Math.round((e.clientX - r.left) / cellW)))
+      down = {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        target: { x, y: term.buffer.active.viewportY + row },
+      }
+    }
+    const onMouseUp = (e: MouseEvent) => {
+      const click = down
+      down = null
+      if (!click || e.button !== 0) return
+      // A drag is a selection, not a click.
+      if (Math.hypot(e.clientX - click.clientX, e.clientY - click.clientY) > 3) return
+      if (term.hasSelection()) return
+      void moveTo(click.target)
+    }
+    const onKeyDown = () => {
+      walk++
+    }
+    host.addEventListener('mousedown', onMouseDown, true)
+    window.addEventListener('mouseup', onMouseUp, true)
+    host.addEventListener('keydown', onKeyDown, true)
+    return () => {
+      walk++
+      host.removeEventListener('mousedown', onMouseDown, true)
+      window.removeEventListener('mouseup', onMouseUp, true)
+      host.removeEventListener('keydown', onKeyDown, true)
+    }
+  }, [tab.id, tab.kind, settings.terminal.clickMovesCursor])
 
   const lastRightClick = useRef(0)
   const onContextMenu = useCallback(

@@ -356,6 +356,13 @@ function TerminalSection() {
         />
       </Field>
 
+      <Field label={t('settings.clickMovesCursor')} hint={t('settings.clickMovesCursorHint')} row>
+        <Toggle
+          checked={s.terminal.clickMovesCursor}
+          onChange={(v) => patch('terminal', { clickMovesCursor: v })}
+        />
+      </Field>
+
       {/* Only macOS has the choice: elsewhere Alt is always Meta and AltGr types. */}
       {platform() === 'macos' && (
         <Field label={t('settings.optionIsMeta')} hint={t('settings.optionIsMetaHint')} row>
