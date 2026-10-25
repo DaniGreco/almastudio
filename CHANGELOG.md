@@ -9,6 +9,8 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+## [1.9.6] - 2026-10-25
+
 ### Added
 
 - A click in Claude Code's prompt moves the cursor there, as the mouse does
