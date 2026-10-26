@@ -16,6 +16,10 @@ release cannot be cut without one.
   Code could only be run by typing `claude` in a terminal tab. A harness
   installed as an `.exe` is now started directly rather than through
   `cmd.exe`, which could not pass its arguments on.
+- On Windows, Ctrl+C copies the selected text and Ctrl+V pastes in
+  terminals, as in Windows Terminal. With nothing selected, Ctrl+C still
+  interrupts the program; with no text to paste — an image, say — Ctrl+V
+  still reaches it, so Claude Code can attach the image.
 
 ## [1.9.6] - 2026-10-25
 
