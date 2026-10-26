@@ -9,6 +9,14 @@ release cannot be cut without one.
 
 ## [Unreleased]
 
+### Fixed
+
+- On Windows, Claude Code tabs start. They stopped at once with "argument
+  contains characters unsupported by the Windows shell wrapper", so Claude
+  Code could only be run by typing `claude` in a terminal tab. A harness
+  installed as an `.exe` is now started directly rather than through
+  `cmd.exe`, which could not pass its arguments on.
+
 ## [1.9.6] - 2026-10-25
 
 ### Added
