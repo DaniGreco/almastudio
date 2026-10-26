@@ -20,6 +20,10 @@ release cannot be cut without one.
   terminals, as in Windows Terminal. With nothing selected, Ctrl+C still
   interrupts the program; with no text to paste — an image, say — Ctrl+V
   still reaches it, so Claude Code can attach the image.
+- Pasting with the right mouse button no longer pastes twice in Claude Code.
+  When Claude Code reads the mouse it pastes on a right click itself, so the
+  terminal now leaves the click to any program that reads the mouse. On
+  Windows and Linux, hold Shift to paste with the terminal instead.
 
 ## [1.9.6] - 2026-10-25
 

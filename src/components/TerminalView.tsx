@@ -824,6 +824,11 @@ export function TerminalView({ tab, visible, focused }: Props) {
       e.preventDefault()
       const term = termRef.current
       if (!term) return
+      // A program that reads the mouse has been sent this click already —
+      // xterm holds it back only with Shift, and never on macOS — and Claude
+      // Code pastes on a right click itself: pasting here too typed it twice.
+      const heldBack = e.shiftKey && platform() !== 'macos'
+      if (term.modes.mouseTrackingMode !== 'none' && !heldBack) return
       // WebView2 can deliver one right click as two context-menu events;
       // a second paste a moment later is never what was meant.
       if (e.timeStamp - lastRightClick.current < 400) return
