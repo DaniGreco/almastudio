@@ -24,6 +24,10 @@ release cannot be cut without one.
   When Claude Code reads the mouse it pastes on a right click itself, so the
   terminal now leaves the click to any program that reads the mouse. On
   Windows and Linux, hold Shift to paste with the terminal instead.
+- On Windows, coming back to AlmaStudio with Alt-Tab or from the taskbar
+  lets you type in the terminal you were using right away. The window took
+  the keyboard focus back but never passed it on to its contents, so what
+  you typed went nowhere until you clicked in the window.
 
 ## [1.9.6] - 2026-10-25
 
